@@ -1,0 +1,83 @@
+Resources:
+  RestApiUrlSSMParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /${self:custom.env.serviceName}/${self:provider.stage}/apis/rest-api/api-url
+      Type: String
+      Value:
+        Fn::Join:
+          - ""
+          - - "https://"
+            - Ref: ApiGatewayRestApi
+            - ".execute-api."
+            - "${self:provider.region}"
+            - ".amazonaws.com/"
+            - "${self:provider.stage}"
+  RepoApiKeySSMParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /${self:custom.env.serviceName}/${self:provider.stage}/apis/rest-api/repo-api-key
+      Type: String
+      Value: ${self:custom.env.repoApiKey}
+  AppApiKeySSMParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /${self:custom.env.serviceName}/${self:provider.stage}/apis/rest-api/app-api-key
+      Type: String
+      Value: ${self:custom.env.appApiKey}
+  ConfigTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: ${self:custom.env.configTableName}
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+  iamLambdaRoleExecution:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: ${self:custom.namePrefix}-lambda-role-execution
+      Description: "Lambda execution role for ${self:custom.env.serviceName}"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AWSXrayWriteOnlyAccess
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: Logging_Policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  - "arn:aws:logs:*:*:*"
+        - PolicyName: DynamoDB_Policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                Resource:
+                  - "arn:aws:dynamodb:${self:provider.region}:${self:custom.accountId}:table/${self:custom.env.configTableName}"
+                  - "arn:aws:dynamodb:${self:provider.region}:${self:custom.accountId}:table/${self:custom.env.configTableName}/index/*"
+                  # Only for migration remove or comment this
+                  - "arn:aws:dynamodb:${self:provider.region}:${self:custom.accountId}:table/*"

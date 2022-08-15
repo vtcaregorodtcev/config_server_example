@@ -1,0 +1,17 @@
+webhook:
+  handler: src/handlers/repo-webhook.handler
+  name: ${self:custom.namePrefix}-repo-webhook-handler
+  events:
+    - http:
+        method: post
+        path: webhook
+        cors: true
+getConfig:
+  handler: src/handlers/get-config.handler
+  name: ${self:custom.namePrefix}-get-config-handler
+  events:
+    - http:
+        method: get
+        path: config
+        cors: true
+        private: true
